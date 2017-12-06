@@ -16,7 +16,7 @@ class DeltaGenerator(object):
         df_educ = df.groupby("educ").mean()
 
         dict_values = []
-        for tau in [10, 25, 50, 75, 90]:
+        for tau in self.QUANTILES_LIST:
             for index in range(5, 21):
                 dict_values.append(
                     ("delta%i_q%i" % (index, tau),
