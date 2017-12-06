@@ -25,5 +25,5 @@ class DeltaGenerator(object):
                 )
         dft = pd.DataFrame(dict_values).set_index(0).T
         result = pd.concat([dft] * 101).reset_index(drop='True')
-        result["u"] = range(101)
+        result["u"] = range(1, 102)
         return result
