@@ -16,7 +16,7 @@ class QRGenerator(object):
 
     def process(self):
         # census80qr creation
-        census80qr = pd.merge(self.data, self.data_cq, how ="inner", on = "educ")
+        census80qr = pd.merge(self.data_cq, self.data, how ="inner", on = "educ")
         census80qr["logwk_weighted"] = census80qr["logwk"]*census80qr["perwt"]
 
         QR = smf.quantreg('logwk_weighted ~ educ', census80qr)
@@ -24,18 +24,16 @@ class QRGenerator(object):
         models = [self.fit_model(x/100, QR) for x in self.QUANTILES_LIST]
         models = pd.DataFrame(models, columns=['tau', 'a', 'b'])
 
-        get_y = lambda a, b, x: a + b * x
-
+        get_y = np.vectorize(lambda a, b, x: a + b * x)
         for tau in self.QUANTILES_LIST:
-            census80qr["qrlogwk_q"+str(tau)] = get_y(models.loc[models.tau == tau, "a"],
-                                                     models.loc[models.tau == tau, "b"],
-                                                     census80qr["educ"])
+            a = models.loc[models.tau == tau, "a"]
+            b = models.loc[models.tau == tau, "b"]
+            census80qr["qrlogwk_q"+str(tau)] = get_y(a, b, np.array(census80qr["educ"]))
 
         ols = smf.ols('logwk_weighted ~ educ', census80qr).fit()
-
-        census80qr["qrlogwk_ols"] = get_y(ols.params['Intercept'],
-                                          ols.params['educ'], 
-                                          census80qr["educ"])
+        Int = ols.params['Intercept']
+        Slope = ols.params['educ']
+        census80qr["qrlogwk_ols"] = get_y(Int, Slope, np.array(census80qr["educ"]))
 
         # No fuckin' idea why we are doing this shit
         census80qr["cqlogwk_ols"] = census80qr["logwk"]
@@ -67,14 +65,16 @@ class QRGenerator(object):
             census80g['weighted_cqlogwk_q' + str(tau)] = census80g['cqlogwk_q' + str(tau)]*census80g['preduc']
             instructions = 'weighted_cqlogwk_q' + str(tau) + ' ~ educ'
             ols_tau = smf.ols(instructions, census80g).fit()
-            census80g["cqrlogwk_q" + str(tau)] = get_y(ols_tau.params['Intercept'], ols_tau.params['educ'], census80g["educ"])
+            a = ols_tau.params['Intercept']
+            b = ols_tau.params['educ']
+            census80g["cqrlogwk_q" + str(tau)] = get_y(a, b, np.array(census80g["educ"]))
 
         keep_columns = []
         for name in ['delta', 'preduc', 'educ', 'cqlogwk', 'qrlogwk', 'cqrlogwk']:
             keep_columns += [col for col in census80g.columns if col.startswith(name)]
         census80g = census80g[keep_columns]
 
-        census80g.sort_values('educ')
+        census80g.sort_values('educ',inplace = True)
 
         result = [census80qr, census80g]
         return(result)

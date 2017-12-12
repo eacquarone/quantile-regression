@@ -9,8 +9,8 @@ def main():
 
 	result = qr_generator.process()
 	
-	result[0].to_csv("Data/census80qr.csv")
-	result[1].to_csv("Data/census80g.csv")
+	result[0].to_csv("Data/census80qr.csv", index = False)
+	result[1].to_csv("Data/census80g.csv", index = False)
 
 if __name__ == '__main__':
 	main()
