@@ -212,6 +212,8 @@ class IWGenerator(object):
         weights_rescaled.columns = ["wqr5_" + c.split('_')[1] for c in weights]
 
         data = weights.join(weights_rescaled)
+        data["educ"] = data.index.astype(int)
+
         return data
 
 
