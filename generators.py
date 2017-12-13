@@ -19,43 +19,72 @@ def silverman_factor(x):
     return (.9 * m) / n**(.2)
 
 
+class CQGenerator(object):
+    def __init__(self, data):
+        self.data = data
+
+    def process(self):
+        census_data = self.data
+
+        for i in [10, 25, 50, 75, 90]:
+            census_data["cqlogwk_q%i" % i] = census_data.logwk
+
+        columns = [
+            'educ', 'cqlogwk_q10', 'cqlogwk_q25',
+            'cqlogwk_q50', 'cqlogwk_q75', 'cqlogwk_q90'
+        ]
+
+        census_data_cq = census_data[columns]
+
+        result = census_data_cq.groupby('educ').agg({
+            'cqlogwk_q10': (lambda x: x.quantile(.1)),
+            u'cqlogwk_q25': (lambda x: x.quantile(.25)),
+            u'cqlogwk_q50': (lambda x: x.quantile(.5)),
+            u'cqlogwk_q75': (lambda x: x.quantile(.75)),
+            u'cqlogwk_q90': (lambda x: x.quantile(.9))
+        })
+
+        return result
+
+
 class QRGenerator(object):
     def __init__(self, data, data_cq):
         self.data = data
         self.data_cq = data_cq
 
-    def fit_model(self, q, model):
+    @staticmethod
+    def fit(model, q):
         res = model.fit(q=q)
-        return [np.int(q * 100), res.params['Intercept'], res.params['educ']]
+        return np.int(q * 100), res.params['Intercept'], res.params['educ']
 
     @staticmethod
     def predict(intercept, slope, x):
         f = np.vectorize(lambda a, b, x: a + b * x)
-        return f(intercept, slope, x)
+        y = f(intercept, slope, x)
+        return y
 
     def process(self):
-
         # data_qr creation
         data_qr = pd.merge(self.data_cq, self.data, how="inner", on="educ")
         data_qr["logwk_weighted"] = data_qr["logwk"] * data_qr["perwt"]
 
         QR = smf.quantreg('logwk_weighted ~ educ', data_qr)
 
-        models = [self.fit_model(x / 100, QR) for x in QUANTILES_LIST]
+        models = [self.fit(QR, q / 100.) for q in QUANTILES_LIST]
         models = pd.DataFrame(models, columns=['tau', 'a', 'b'])
 
         for tau in QUANTILES_LIST:
             a = models.loc[models.tau == tau, "a"]
             b = models.loc[models.tau == tau, "b"]
             x = data_qr["educ"]
+
             data_qr["qrlogwk_q" + str(tau)] = self.predict(a, b, x)
 
         ols = smf.ols('logwk_weighted ~ educ', data_qr).fit()
-        Int = ols.params['Intercept']
-        Slope = ols.params['educ']
-        data_qr["qrlogwk_ols"] = Int + Slope * data_qr["educ"]
-
-        # No fuckin' idea why we are doing this shit
+        intercept = ols.params['Intercept']
+        slope = ols.params['educ']
+        x = data_qr["educ"]
+        data_qr["qrlogwk_ols"] = self.predict(intercept, slope, x)
         data_qr["cqlogwk_ols"] = data_qr["logwk"]
 
         for tau in QUANTILES_LIST:
@@ -78,7 +107,6 @@ class QRGenerator(object):
         collapse_dico['perwt'] = 'sum'
 
         data_g = data_qr.groupby("educ").agg(collapse_dico)
-
         data_g.reset_index(inplace=True)
         data_g['educ'] = data_g['educ'].apply(lambda x: np.int(x))
 
@@ -94,6 +122,7 @@ class QRGenerator(object):
             a = ols_tau.params['Intercept']
             b = ols_tau.params['educ']
             x = data_g["educ"]
+
             data_g["cqrlogwk_q" + str(tau)] = self.predict(a, b, x)
 
         keep_columns = []
@@ -105,7 +134,6 @@ class QRGenerator(object):
             ]
 
         data_g = data_g[keep_columns]
-
         data_g.sort_values('educ', inplace=True)
 
         result = [data_qr, data_g]
@@ -128,8 +156,7 @@ class DeltaGenerator(object):
             for index in range(5, 21):
                 dict_values.append(
                     ("delta%i_q%i" % (index, tau),
-                     df_educ.loc[index]["delta_q%i" % tau]
-                     )
+                     df_educ.loc[index]["delta_q%i" % tau])
                 )
         dft = pd.DataFrame(dict_values).set_index(0).T
         result = pd.concat([dft] * 101).reset_index(drop='True')
@@ -137,7 +164,7 @@ class DeltaGenerator(object):
         return result
 
 
-class ImportanceWeights(object):
+class IWGenerator(object):
     def __init__(self, qr, delta):
         self.qr = qr
         self.delta = delta
@@ -188,7 +215,7 @@ class ImportanceWeights(object):
         return data
 
 
-class DensityWeights(object):
+class DWGenerator(object):
 
     def __init__(self, qr):
         self.qr = qr
