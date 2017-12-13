@@ -39,8 +39,9 @@ def delta(year):
 def importance_weights(year):
     census_qr = pd.read_csv("Data/census{}qr.csv".format(year))
     census_delta = pd.read_csv("Data/census{}delta.csv".format(year))
+    census_g = pd.read_csv("Data/census{}g.csv".format(year))
 
-    imp_generator = IWGenerator(census_qr, census_delta)
+    imp_generator = IWGenerator(census_qr, census_delta, census_g)
     result = imp_generator.process()
 
     result.to_csv("Data/census{}gimp.csv".format(year), index=False)

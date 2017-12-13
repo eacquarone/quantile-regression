@@ -27,9 +27,9 @@ def main():
     for i, (letter, q) in enumerate(zip(["D", "E", "F"], [10, 50, 90])):
         plt.subplot(2, 3, 3 + i + 1)
         q = str(q)
-        plt.plot(data["educ"], data["wqr5_q" + q], "o", label="QR Weights")
-        plt.plot(data["educ"], data["dwqr2_q" + q], "-", label="Imp. Weights")
-        plt.plot(data["educ"], data["wqr5_q" + q], "--", label="Dens. Weights")
+        plt.plot(data["educ"], data["awqr5_q" + q], "-.", label="QR")
+        plt.plot(data["educ"], data["wqr5_q" + q], "-", label="Imp.")
+        plt.plot(data["educ"], data["dwqr2_q" + q], "--", label="Dens.")
         plt.ylim(0, 0.5)
         plt.xlabel("Schooling")
         plt.ylabel("Weight")

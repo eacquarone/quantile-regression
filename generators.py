@@ -115,7 +115,7 @@ class QRGenerator(object):
 
         for tau in QUANTILES_LIST:
             data_g['weighted_cqlogwk_q' + str(tau)] = data_g['cqlogwk_q' + str(tau)]
-            data_g['weighted_cqlogwk_q' + str(tau)] *= data_g['preduc']
+            # data_g['weighted_cqlogwk_q' + str(tau)] *= data_g['preduc']
 
             instructions = 'weighted_cqlogwk_q' + str(tau) + ' ~ educ'
             ols_tau = smf.ols(instructions, data_g).fit()
@@ -165,9 +165,11 @@ class DeltaGenerator(object):
 
 
 class IWGenerator(object):
-    def __init__(self, qr, delta):
+    def __init__(self, qr, delta, g):
         self.qr = qr
         self.delta = delta
+        self.g = g
+        self.g.index = g["educ"]
 
     def process(self):
         data = self.delta
@@ -212,6 +214,11 @@ class IWGenerator(object):
         weights_rescaled.columns = ["wqr5_" + c.split('_')[1] for c in weights]
 
         data = weights.join(weights_rescaled)
+        for q in QUANTILES_LIST:
+            col = data["wqr5_q" + str(q)] * self.g["preduc"]
+            col = col / col.sum(axis=0)
+            data["awqr5_q" + str(q)] = col
+
         data["educ"] = data.index.astype(int)
 
         return data
