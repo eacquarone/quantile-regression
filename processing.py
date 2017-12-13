@@ -57,5 +57,5 @@ def density_weights(year):
 
 def histogram(year):
     census_data = pd.read_stata("Data/census{}.dta".format(year))
-    census_i = census_data[["educ"]]
+    census_i = census_data[["educ"]].astype(int)
     census_i.to_csv("Data/census{}i.csv".format(year), index=False)
