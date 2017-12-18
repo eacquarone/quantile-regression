@@ -1,60 +1,89 @@
 import numpy as np
 import pandas as pd
 from scipy.stats import norm
+from scipy.linalg import sqrtm
+import statsmodels.formula.api as smf
 
+def add_columns(df):
+    df['weight * educ'] = df["weight"] * df["educ"]
+    df["weight * exper"] = df["weight"] * df["exper"]
+    df["weight * black"] = df["weight"] * df["black"]
+    df["weight * exper2"] = df["weight"] * df["exper"] ** 2
+    return( df)
 
-def main():
+def sigma(df, n, tau, res):
+    df['sub'] = (tau - (res <= 0))
+    df["weight"] = df["perwt"] * df['sub']
+    add_columns(df)
+    x = df[['weight', 'weight * educ', 'weight * exper', 'weight * exper2', 'weight * black']]
+    return( np.dot(x.T.values, x.values) / float(n))
 
-    import numpy as np
+def sigma2(df, n, tau):
+    df["weight"] = df["perwt"] * np.sqrt(tau * (1 - tau))
+    add_columns(df)
+    x = df[["weight"]]
+    return(np.dot(x.T.values, x.values) / float(n))
 
-    def add_columns(df):
-        df['weight * educ'] = df["weight"] * df["educ"]
-        df["weight * exper"] = df["weight"] * df["exper"]
-        df["weight * black"] = df["weight"] * df["black"]
-        df["weight * exper2"] = df["weight"] * df["exper"] ** 2
-        return df
+def sigma0(df, n, tau, res):
+    df["weight"] = df["perwt"] * np.sqrt(tau * (1 - tau))
+    add_columns(df)
+    x = ["weight", "weight * educ", "weight * exper", "weight * exper2", "weight * black"];
+    return( np.dot(df[x].T.values, df[x].values) / float(n))
 
-    def sigma(df, n, tau, res):
-        df['sub'] = (tau - (res <= 0)).values
-        df["weight"] = df["perwt"] * df['sub']
-        add_columns(df)
-        x = df[['weight', 'weight * educ', 'weight * exper', 'weight * exper2', 'weight * black']]
-        return np.dot(x.T.values, x.values) / float(n)
+def jacobian(df, n, tau, res, alpha):
+    hn = (norm.ppf(1. - alpha / 2.) ** (2. / 3.)) * ((1.5 * norm.pdf(norm.ppf(tau)) ** 2.)
+                                                  / (2. * norm.ppf(tau)**2 + 1.))**(1. / 3) * (n**(-1. / 3))
+    df["sub"] = (abs(res) <= hn)
+    df["weight"] = np.sqrt(df["perwt"]) * df["sub"]
+    add_columns(df)
+    x = ["weight", "weight * educ", "weight * exper", "weight * exper2", "weight * black"]
+    return(np.dot(df[x].T.values, df[x].values) / (2*hn*float(n)))
 
-    def sigma2(df, n, tau):
-        df["weight"] = df["perwt"] * np.sqrt(tau * (1 - tau))
-        add_columns(df)
-        x = df[["weight"]]
-        return np.dot(x.T.values, x.values) / float(n)
+def jacobian2(df, n, tau, res, alpha):
+    hn = (norm.ppf(1. - alpha / 2.) ** (2. / 3.)) * ((1.5 * norm.pdf(norm.ppf(tau)) ** 2.)
+                                                  / (2. * norm.ppf(tau)**2 + 1.))**(1. / 3) * (n**(-1. / 3))
+    df["sub"] = (abs(res) <= hn)
+    df["weight"] = np.sqrt(df["perwt"]) * df["sub"]
+    x = ["weight"]
+    return(np.dot(df[x].T.values, df[x].values) / (2*hn*float(n)))
 
-    def sigma0(df, n, tau):
-        df["weight"] = df["perwt"] * np.sqrt(tau * (1 - tau))
-        add_columns(df)
-        x = ["weight", "weight * educ", "weight * exper", "weight * exper2", "weight * black"];
-        return np.dot(df[x].T.values, df[x].values) / float(n)
+def subsamplek(formula, V, tau, coeffs, data, n, b, B, R):
+    k =  pd.DataFrame([], index = [0])
+    RVR =  (np.float(np.dot(np.dot(R.T, V), R)/b))**(-1/2)
+    for s in range(B):
+        sing = 0
+        while sing == 0:
+            sdata = data.sample(b, replace=True, weights=data['perwt'])
+            x = pd.DataFrame(index = sdata.index)
+            x["educ"] = sdata["perwt"]*sdata["educ"]
+            x["exper"] = sdata["perwt"]*sdata["exper"]
+            x["exper2"] = sdata["perwt"]*sdata["exper2"]
+            x["black"] = sdata["perwt"]*sdata["black"]
+            x["perwt"] = sdata["perwt"]
+            x = x.as_matrix()
+            sing = np.linalg.det(np.dot(x.T,x))
+        # Didn't use weights here
+        sqr_model = smf.quantreg(formula, sdata)
+        sqr = sqr_model.fit(q=tau)
+        new_column = np.abs(np.dot(np.dot(RVR, R.T), coeffs-np.array(sqr.params)))
+        k[str(s)] = new_column
+    return(k)
 
-    def jacobian(df, n, tau, res, alpha):
-        hn = (norm.pdf(1. - alpha / 2.) ** (2. / 3.)) * ((1.5 * norm.pdf(norm.ppf(tau)) ** 2.)
-                                                      / (2. * norm.ppf(tau)**2 + 1.))**(1. / 3) * (n**(-1. / 3))
-        df["sub"] = (abs(res) <= hn).values
-        df["weight"] = np.sqrt(df["perwt"]) * df["sub"]
-        add_columns(df)
-        x = ["weight", "weight * educ", "weight * exper", "weight * exper2", "weight * black"]
-        return np.dot(df[x].T.values, df[x].values) / 2*hn*float(n)
-
-    def jacobian2(df, n, tau, res, alpha):
-        hn = (norm.pdf(1. - alpha / 2.) ** (2. / 3.)) * ((1.5 * norm.pdf(norm.ppf(tau)) ** 2.)
-                                                      / (2. * norm.ppf(tau)**2 + 1.))**(1. / 3) * (n**(-1. / 3))
-        df["sub"] = (abs(res) <= hn).values
-        df["weight"] = np.sqrt(df["perwt"]) * df["sub"]
-        x = ["weight"]
-        return np.dot(df[x].T.values, df[x].values) / 2*hn*float(n)
-
-    df = pd.read_stata("~/Documents/Semi_And_Non_Parametric_Econometrics/quantile-regression/Data/census80.dta")
-    res = pd.read_csv("~/Documents/Semi_And_Non_Parametric_Econometrics/quantile-regression/Data/residuals.csv",index_col = 0)
-
-    print jacobian2(df, len(df), 0.01, res, 0.05)
-
-if __name__ == '__main__':
-    main()
-
+def table_rq_res(formula, taus, data, alpha, R,  n, sigma, jacobian):
+    m = len(taus)
+    tab = pd.DataFrame([], index = [0])
+    setab = pd.DataFrame([], index = [0])
+    for i in range(m):
+        fit_model = smf.quantreg(formula, data)
+        fit = fit_model.fit(q=taus[i])
+        coeff = np.dot(R.T, np.array(fit.params))
+        tab[str(i)] = coeff
+        sigmatau = sigma(data,n,taus[i],fit.resid)
+        jacobtau = jacobian(data, n, taus[i], fit.resid, alpha)
+        solved_jacobtau = np.linalg.inv(jacobtau)
+        V = np.dot(np.dot(solved_jacobtau, sigmatau), solved_jacobtau)/n
+        secoeff = np.float(np.dot(np.dot(R.T, V), R))**.5
+        setab[str(i)] = secoeff
+    tab = tab.transpose()
+    setab = setab.transpose()
+    return(tab, setab)
