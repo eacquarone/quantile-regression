@@ -19,13 +19,15 @@ class TableGenerator(object):
 				res.params['exper'],
 				res.params['exper2']]
 
-	def process(self):
+	def process(self, census = None):
+		if census is not None:
+			self.census = census
 		census80t2 = self.census.copy()
 
 		census80t2["highschool"] = (census80t2["educ"] == 12).apply(lambda x: np.int(x))
 		census80t2["college"] = (census80t2["educ"] == 16).apply(lambda x: np.int(x))
 
-		# census80["logwk_weighted"] = census80["logwk"]*census80["perwt"]
+		# census80t2["logwk"] = census80t2["logwk"]*census80t2["perwt"]
 		QR = smf.quantreg('logwk ~ educ + black + exper + exper2', self.census)
 
 		models = [self.fit_model(x/100, QR) for x in self.QUANTILES_LIST]
@@ -46,15 +48,41 @@ class TableGenerator(object):
 
 		collapse_dico = {}
 		for col in collapse_mean:
-			collapse_dico[col] = "mean"
+			collapse_dico[col] = lambda x : np.mean(x)
 
-		for tau in self.QUANTILES_LIST:
-			collapse_dico["q"+str(tau)] = lambda x : np.percentile(x, q = tau)
+		# Moche mais la boucle bug
+		collapse_dico["q10"] = lambda x : np.percentile(x, q = 10)
+		collapse_dico["q25"] = lambda x : np.percentile(x, q = 25)
+		collapse_dico["q50"] = lambda x : np.percentile(x, q = 50)
+		collapse_dico["q75"] = lambda x : np.percentile(x, q = 75)
+		collapse_dico["q90"] = lambda x : np.percentile(x, q = 90)
 
-		collapse_dico["perwt"] = "count"
+		for col in collapse_dico:
+			census80t2[col] = census80t2[col]*census80t2["perwt"]
 
-		census80t2g = census80t2.groupby(["educ","black", "exper"]).agg(collapse_dico)
+		collapse_dico["perwt"] = "sum"
+
+		census80t2g = census80t2.groupby(["educ","black","exper"]).agg(collapse_dico)
 		census80t2g.reset_index(inplace = True)
-		
-		result = census80t2g
-		return(result)
+
+		# Second part
+		census80t2g["True"] = 1
+		list_tab = []
+		for cond in [census80t2g['educ'] >= 0,census80t2g['educ'] == 12,census80t2g['educ'] == 16]:
+			census80t2g_filtered = census80t2g.loc[cond,:]
+			mean_list = [col for col in census80t2g_filtered.columns if col.startswith("aq") or col.startswith("q")]
+			mean_list += ["highschool", "college"]
+
+			perwt = np.sum(census80t2g_filtered["perwt"])
+			census80t2g_filtered['perwt'] = census80t2g_filtered["perwt"]/perwt
+
+			census80t2g_agg = census80t2g_filtered[mean_list].aggregate(lambda x: np.average(x, weights = census80t2g_filtered['perwt']))
+			census80t2g_agg['perwt'] = np.int(perwt)
+
+			for prefix in ["","a"]:
+				census80t2g_agg[prefix + 'd9010'] = census80t2g_agg[prefix + 'q90']-census80t2g_agg[prefix + 'q10']
+				census80t2g_agg[prefix + 'd7525'] = census80t2g_agg[prefix + 'q75']-census80t2g_agg[prefix + 'q25']
+				census80t2g_agg[prefix + 'd9050'] = census80t2g_agg[prefix + 'q90']-census80t2g_agg[prefix + 'q50']
+				census80t2g_agg[prefix + 'd5010'] = census80t2g_agg[prefix + 'q50']-census80t2g_agg[prefix + 'q10']
+			list_tab += [census80t2g_agg]
+		return(census80t2g, list_tab)
