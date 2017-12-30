@@ -14,6 +14,8 @@ def main():
     np.random.seed(8)
     res_to_plot_list = []
     res0_to_plot_list = []
+    res_to_plot_q_list = []
+    res0_to_plot_q_list = []
     Kalpha_list = []
     Kalpha_list_q = []
     olscoeffs_list = []
@@ -53,20 +55,25 @@ def main():
         K.reset_index(inplace= True)
         K_q.reset_index(inplace= True)
         Kmax = K.apply(lambda x: max(x), axis=0)
-        Kmax_q = Kmax.apply(lambda x: max(x), axis=0)
+        Kmax_q = K_q.apply(lambda x: max(x), axis=0)
         Kalpha = np.percentile(Kmax, (1-alpha)*100)
         Kalpha_q = np.percentile(Kmax_q, (1-alpha)*100)
 
         ols = smf.ols(formula, data)
         olsfit = ols.fit()
         olscoeffs = np.dot(R.T, olsfit.params)
+        olscoeffs_q = np.dot(R_q.T, olsfit.params)
         variables = np.array(olsfit.params.index)
         p = len(variables)
 
-        taus = np.arange(2,19)/20
+        taus = np.arange(2,19)/20.
 
         res_to_plot_list.append(table_rq_res(formula, taus=taus, data = data, alpha = alpha, R = R, n = n, sigma=sigma, jacobian = jacobian))
         res0_to_plot_list.append(table_rq_res(formula, taus=taus, data = data, alpha = alpha, R = R, n = n, sigma=sigma0, jacobian = jacobian))
+        res_to_plot_q_list.append(
+            table_rq_res(formula, taus=taus, data=data, alpha=alpha, R=R_q, n=n, sigma=sigma, jacobian=jacobian))
+        res0_to_plot_q_list.append(
+            table_rq_res(formula, taus=taus, data=data, alpha=alpha, R=R_q, n=n, sigma=sigma0, jacobian=jacobian))
         Kalpha_list.append(Kalpha)
         Kalpha_list_q.append(Kalpha_q)
         olscoeffs_list.append(olscoeffs)
@@ -100,19 +107,19 @@ def main():
     ax1.set_title('Schooling Coefficients')
     plt.show()
 
-    #Second graphe mais il me manque les Kalpha associés
+    #Second graphe
 
-    b80_bis = np.array(res_to_plot_list[0][0].iloc[:,0]) - np.float(res_to_plot_list[0][0].iloc[10,1])
-    ub80_p_bis = b80_bis + 100*Kalpha_list_q[0]*np.array(res_to_plot_list[0][1].iloc[:,0])
-    ub80_m_bis = b80_bis - 100*Kalpha_list_q[0]*np.array(res_to_plot_list[0][1].iloc[:,0])
+    b80_bis = np.array(res_to_plot_q_list[0][0].iloc[:, 0]) - np.float(res_to_plot_q_list[0][0].iloc[10, 1])
+    ub80_p_bis = b80_bis + 100*Kalpha_list_q[0]*np.array(res_to_plot_q_list[0][1].iloc[:,0])
+    ub80_m_bis = b80_bis - 100*Kalpha_list_q[0]*np.array(res_to_plot_q_list[0][1].iloc[:,0])
 
-    b90_bis = np.array(res_to_plot_list[1][0].iloc[:,0]) - np.float(res_to_plot_list[1][0].iloc[10,1])
-    ub90_p_bis = b90_bis + 100*Kalpha_list_q[1]*np.array(res_to_plot_list[1][1].iloc[:,0])
-    ub90_m_bis = b90_bis - 100*Kalpha_list_q[1]*np.array(res_to_plot_list[1][1].iloc[:,0])
+    b90_bis = np.array(res_to_plot_q_list[1][0].iloc[:,0]) - np.float(res_to_plot_q_list[1][0].iloc[10,1])
+    ub90_p_bis = b90_bis + 100*Kalpha_list_q[1]*np.array(res_to_plot_q_list[1][1].iloc[:,0])
+    ub90_m_bis = b90_bis - 100*Kalpha_list_q[1]*np.array(res_to_plot_q_list[1][1].iloc[:,0])
 
-    b00_bis = np.array(res_to_plot_list[2][0].iloc[:,0]) - np.float(res_to_plot_list[2][0].iloc[10,1])
-    ub00_p_bis = b00_bis + 100*Kalpha_list_q[2]*np.array(res_to_plot_list[2][1].iloc[:,0])
-    ub00_m_bis = b00_bis - 100*Kalpha_list_q[2]*np.array(res_to_plot_list[2][1].iloc[:,0])
+    b00_bis = np.array(res_to_plot_q_list[2][0].iloc[:,0]) - np.float(res_to_plot_q_list[2][0].iloc[10,1])
+    ub00_p_bis = b00_bis + 100*Kalpha_list_q[2]*np.array(res_to_plot_q_list[2][1].iloc[:,0])
+    ub00_m_bis = b00_bis - 100*Kalpha_list_q[2]*np.array(res_to_plot_q_list[2][1].iloc[:,0])
 
     fig, (ax1) = plt.subplots()
     ax1.plot(taus, b80_bis,'--', label = '1980', color='black')

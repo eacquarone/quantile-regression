@@ -53,7 +53,7 @@ def subsamplek(formula, V, tau, coeffs, data, n, b, B, R):
     for s in range(B):
         sing = 0
         while sing == 0:
-            sdata = data.sample(b, replace=True, weights=data['perwt'])
+            sdata = data.sample(int(b), replace=True, weights=data['perwt'])
             x = pd.DataFrame(index = sdata.index)
             x["educ"] = sdata["perwt"]*sdata["educ"]
             x["exper"] = sdata["perwt"]*sdata["exper"]
