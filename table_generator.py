@@ -1,7 +1,6 @@
 import pandas as pd
 import numpy as np
 import statsmodels.formula.api as smf
-from functools import partial
 
 class TableGenerator(object):
 

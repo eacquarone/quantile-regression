@@ -10,7 +10,7 @@ def subsamplek(formula, V, tau, coeffs, data, n, b, B, R):
         sing = 0
         while sing == 0:
             sdata = data.sample(b, replace=True, weights=df['perwt'])
-            x = matrix(sdata["perw"]*sdata["educ"],
+            x = np.matrix(sdata["perw"]*sdata["educ"],
                        sdata["perw"]*sdata["exper"],
                        sdata["perw"]*sdata["exper2"],
                        sdata["perw"]*sdata["black"],
