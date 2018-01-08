@@ -10,6 +10,7 @@ import warnings
 from matplotlib import pyplot as plt
 warnings.filterwarnings('ignore')
 
+
 def main():
     np.random.seed(8)
     res_to_plot_list = []
@@ -20,19 +21,20 @@ def main():
     Kalpha_list_q = []
     olscoeffs_list = []
 
-    for year in ['80','90','00']:
-        data = pd.read_stata('Data/census'+year+'.dta')
-        print data
+    for year in ['80', '90', '00']:
+        data = pd.read_stata('Data/census' + year + '.dta')
+        print(data)
         data_q = data
         data_q['one'] = 1.
         n = data.shape[0]
         B = 500
-        b = np.round(5*n**(2/5.))
-        R = np.matrix([0,1,0,0,0]).T
-        R_q = data_q[["one","educ", "exper", "exper2", "black"]].multiply(data['perwt'], axis='index').mean(axis=0)
+        b = np.round(5 * n**(2 / 5.))
+        R = np.matrix([0, 1, 0, 0, 0]).T
+        R_q = data_q[["one", "educ", "exper", "exper2", "black"]
+                     ].multiply(data['perwt'], axis='index').mean(axis=0)
         alpha = 0.05
 
-        taus = np.arange(1,10)/10.
+        taus = np.arange(1, 10) / 10.
         ntaus = len(taus)
 
         formula = 'logwk~educ+exper+exper2+black'
@@ -46,18 +48,22 @@ def main():
             jacobtau = jacobian(data, n, taus[i], res, alpha)
             solved_jacobian = np.linalg.inv(jacobtau)
             V = np.dot(solved_jacobian, np.dot(sigmatau, solved_jacobian))
-            if i == 0 :
-                K = subsamplek(formula = formula, V = V, tau = taus[i], coeffs = coeffs, data = data, n = n, b = b, B = B, R = R)
-                K_q = subsamplek(formula = formula, V = V, tau = taus[i], coeffs = coeffs, data = data, n = n, b = b, B = B, R = R_q)
+            if i == 0:
+                K = subsamplek(formula=formula, V=V,
+                               tau=taus[i], coeffs=coeffs, data=data, n=n, b=b, B=B, R=R)
+                K_q = subsamplek(formula=formula, V=V,
+                                 tau=taus[i], coeffs=coeffs, data=data, n=n, b=b, B=B, R=R_q)
             else:
-                K = K.append(subsamplek(formula = formula, V = V, tau = taus[i], coeffs = coeffs, data = data, n = n, b = b, B = B, R = R))
-                K_q = K_q.append(subsamplek(formula = formula, V=V, tau=taus[i], coeffs=coeffs, data = data, n=n,b=b, B= B, R= R_q ))
-        K.reset_index(inplace= True)
-        K_q.reset_index(inplace= True)
+                K = K.append(subsamplek(formula=formula, V=V,
+                                        tau=taus[i], coeffs=coeffs, data=data, n=n, b=b, B=B, R=R))
+                K_q = K_q.append(subsamplek(formula=formula, V=V,
+                                            tau=taus[i], coeffs=coeffs, data=data, n=n, b=b, B=B, R=R_q))
+        K.reset_index(inplace=True)
+        K_q.reset_index(inplace=True)
         Kmax = K.apply(lambda x: max(x), axis=0)
         Kmax_q = K_q.apply(lambda x: max(x), axis=0)
-        Kalpha = np.percentile(Kmax, (1-alpha)*100)
-        Kalpha_q = np.percentile(Kmax_q, (1-alpha)*100)
+        Kalpha = np.percentile(Kmax, (1 - alpha) * 100)
+        Kalpha_q = np.percentile(Kmax_q, (1 - alpha) * 100)
 
         ols = smf.ols(formula, data)
         olsfit = ols.fit()
@@ -66,10 +72,12 @@ def main():
         variables = np.array(olsfit.params.index)
         p = len(variables)
 
-        taus = np.arange(2,19)/20.
+        taus = np.arange(2, 19) / 20.
 
-        res_to_plot_list.append(table_rq_res(formula, taus=taus, data = data, alpha = alpha, R = R, n = n, sigma=sigma, jacobian = jacobian))
-        res0_to_plot_list.append(table_rq_res(formula, taus=taus, data = data, alpha = alpha, R = R, n = n, sigma=sigma0, jacobian = jacobian))
+        res_to_plot_list.append(table_rq_res(formula, taus=taus, data=data,
+                                             alpha=alpha, R=R, n=n, sigma=sigma, jacobian=jacobian))
+        res0_to_plot_list.append(table_rq_res(formula, taus=taus, data=data,
+                                              alpha=alpha, R=R, n=n, sigma=sigma0, jacobian=jacobian))
         res_to_plot_q_list.append(
             table_rq_res(formula, taus=taus, data=data, alpha=alpha, R=R_q, n=n, sigma=sigma, jacobian=jacobian))
         res0_to_plot_q_list.append(
@@ -107,32 +115,36 @@ def main():
     # ax1.set_title('Schooling Coefficients')
     # plt.show()
 
-    #Second graphe
+    # Second graphe
 
-    b80_bis = np.array(res_to_plot_q_list[0][0].iloc[:, 0]) - np.float(res_to_plot_q_list[0][0].iloc[9, 0])
-    ub80_p_bis = b80_bis + 100*Kalpha_list_q[0]*np.array(res_to_plot_q_list[0][1].iloc[:,0])
-    ub80_m_bis = b80_bis - 100*Kalpha_list_q[0]*np.array(res_to_plot_q_list[0][1].iloc[:,0])
+    b80_bis = np.array(res_to_plot_q_list[0][0].iloc[:, 0]) - \
+        np.float(res_to_plot_q_list[0][0].iloc[9, 0])
+    ub80_p_bis = b80_bis + 100 * Kalpha_list_q[0] * np.array(res_to_plot_q_list[0][1].iloc[:, 0])
+    ub80_m_bis = b80_bis - 100 * Kalpha_list_q[0] * np.array(res_to_plot_q_list[0][1].iloc[:, 0])
 
-    b90_bis = np.array(res_to_plot_q_list[1][0].iloc[:,0]) - np.float(res_to_plot_q_list[1][0].iloc[9,0])
-    ub90_p_bis = b90_bis + 100*Kalpha_list_q[1]*np.array(res_to_plot_q_list[1][1].iloc[:,0])
-    ub90_m_bis = b90_bis - 100*Kalpha_list_q[1]*np.array(res_to_plot_q_list[1][1].iloc[:,0])
+    b90_bis = np.array(res_to_plot_q_list[1][0].iloc[:, 0]) - \
+        np.float(res_to_plot_q_list[1][0].iloc[9, 0])
+    ub90_p_bis = b90_bis + 100 * Kalpha_list_q[1] * np.array(res_to_plot_q_list[1][1].iloc[:, 0])
+    ub90_m_bis = b90_bis - 100 * Kalpha_list_q[1] * np.array(res_to_plot_q_list[1][1].iloc[:, 0])
 
-    b00_bis = np.array(res_to_plot_q_list[2][0].iloc[:,0]) - np.float(res_to_plot_q_list[2][0].iloc[9,0])
-    ub00_p_bis = b00_bis + 100*Kalpha_list_q[2]*np.array(res_to_plot_q_list[2][1].iloc[:,0])
-    ub00_m_bis = b00_bis - 100*Kalpha_list_q[2]*np.array(res_to_plot_q_list[2][1].iloc[:,0])
+    b00_bis = np.array(res_to_plot_q_list[2][0].iloc[:, 0]) - \
+        np.float(res_to_plot_q_list[2][0].iloc[9, 0])
+    ub00_p_bis = b00_bis + 100 * Kalpha_list_q[2] * np.array(res_to_plot_q_list[2][1].iloc[:, 0])
+    ub00_m_bis = b00_bis - 100 * Kalpha_list_q[2] * np.array(res_to_plot_q_list[2][1].iloc[:, 0])
 
     fig, (ax1) = plt.subplots()
-    ax1.plot(taus, b80_bis,'--', label = '1980', color='black')
-    ax1.plot(taus, b90_bis,'--', label = '1990', color='black')
-    ax1.plot(taus, b00_bis,'--', label = '2000', color='black')
+    ax1.plot(taus, b80_bis, '--', label='1980', color='black')
+    ax1.plot(taus, b90_bis, '--', label='1990', color='black')
+    ax1.plot(taus, b00_bis, '--', label='2000', color='black')
 
-    ax1.fill_between(taus, ub80_m_bis, ub80_p_bis, facecolor='silver', interpolate=True, alpha = .5)
-    ax1.fill_between(taus, ub90_m_bis, ub90_p_bis, facecolor='dimgrey', interpolate=True, alpha = .5)
-    ax1.fill_between(taus, ub00_m_bis, ub00_p_bis, facecolor='grey', interpolate=True, alpha = .5)
+    ax1.fill_between(taus, ub80_m_bis, ub80_p_bis, facecolor='silver', interpolate=True, alpha=.5)
+    ax1.fill_between(taus, ub90_m_bis, ub90_p_bis, facecolor='dimgrey', interpolate=True, alpha=.5)
+    ax1.fill_between(taus, ub00_m_bis, ub00_p_bis, facecolor='grey', interpolate=True, alpha=.5)
     ax1.set_xlabel('Quantile Index')
     ax1.set_ylabel('Schooling Coefficients (%)')
     ax1.set_title('CONDITIONAL QUANTILES (at covariate means)')
     plt.show()
+
 
 if __name__ == '__main__':
     main()
