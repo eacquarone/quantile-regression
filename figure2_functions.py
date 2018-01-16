@@ -3,6 +3,7 @@ import pandas as pd
 from scipy.stats import norm
 from scipy.linalg import sqrtm
 import statsmodels.formula.api as smf
+from time import time
 
 def add_columns(df):
     df['weight * educ'] = df["weight"] * df["educ"]
@@ -48,25 +49,22 @@ def jacobian2(df, n, tau, res, alpha):
     return(np.dot(df[x].T.values, df[x].values) / (2*hn*float(n)))
 
 def subsamplek(formula, V, tau, coeffs, data, n, b, B, R):
-    k =  pd.DataFrame([], index = [0])
+    k =  np.zeros(B)
     RVR =  (np.float(np.dot(np.dot(R.T, V), R)/b))**(-1/2)
+    probs = np.array(data['perwt'])/np.sum(np.array(data['perwt']))
     for s in range(B):
         sing = 0
         while sing == 0:
-            sdata = data.sample(int(b), replace=True, weights=data['perwt'])
-            x = pd.DataFrame(index = sdata.index)
-            x["educ"] = sdata["perwt"]*sdata["educ"]
-            x["exper"] = sdata["perwt"]*sdata["exper"]
-            x["exper2"] = sdata["perwt"]*sdata["exper2"]
-            x["black"] = sdata["perwt"]*sdata["black"]
-            x["perwt"] = sdata["perwt"]
+            sample = np.random.choice(np.arange(0,n), size = int(b), replace = True, p = probs)
+            sdata = data.iloc[sample,:]
+            # sdata = data.sample(int(b), replace = True, weights = data['perwt'])
+            x = sdata[["educ","exper","exper2","black","perwt"]]
             x = x.as_matrix()
             sing = np.linalg.det(np.dot(x.T,x))
         # Didn't use weights here
         sqr_model = smf.quantreg(formula, sdata)
         sqr = sqr_model.fit(q=tau)
-        new_column = np.abs(np.dot(np.dot(RVR, R.T), coeffs-np.array(sqr.params)))
-        k[str(s)] = new_column
+        k[s] =  np.abs(np.dot(np.dot(RVR, R.T), coeffs-np.array(sqr.params)))
     return(k)
 
 def table_rq_res(formula, taus, data, alpha, R,  n, sigma, jacobian):

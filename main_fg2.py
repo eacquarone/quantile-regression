@@ -9,6 +9,7 @@ from scipy.linalg import sqrtm
 import warnings
 import os
 from matplotlib import pyplot as plt
+from multiprocessing import Pool
 import csv
 warnings.filterwarnings('ignore')
 
@@ -40,6 +41,9 @@ def main():
 
             formula = 'logwk~educ+exper+exper2+black'
 
+            V_list = []
+            coeffs_list = []
+
             for i in tqdm(range(ntaus)):
                 qr = smf.quantreg(formula, data)
                 qrfit = qr.fit(q=taus[i])
@@ -49,19 +53,21 @@ def main():
                 jacobtau = jacobian(data, n, taus[i], res, alpha)
                 solved_jacobian = np.linalg.inv(jacobtau)
                 V = np.dot(solved_jacobian, np.dot(sigmatau, solved_jacobian))
-                if i == 0 :
-                    K = subsamplek(formula = formula, V = V, tau = taus[i], coeffs = coeffs, data = data, n = n, b = b, B = B, R = R)
-                    K_q = subsamplek(formula = formula, V = V, tau = taus[i], coeffs = coeffs, data = data, n = n, b = b, B = B, R = R_q)
-                else:
-                    K = K.append(subsamplek(formula = formula, V = V, tau = taus[i], coeffs = coeffs, data = data, n = n, b = b, B = B, R = R))
-                    K_q = K_q.append(subsamplek(formula = formula, V=V, tau=taus[i], coeffs=coeffs, data = data, n=n,b=b, B= B, R= R_q ))
-            K.reset_index(inplace= True)
-            K_q.reset_index(inplace= True)
-            Kmax = K.apply(lambda x: max(x), axis=0)
-            Kmax_q = K_q.apply(lambda x: max(x), axis=0)
-            Kalpha = np.percentile(Kmax, (1-alpha)*100)
-            Kalpha_q = np.percentile(Kmax_q, (1-alpha)*100)
+                V_list += [V]
+                coeffs_list += [coeffs]
 
+            with Pool(4) as pool:
+                K = pool.starmap(subsamplek, zip([formula]*ntaus, V_list, taus, coeffs_list, [data_q]*ntaus, [n]*ntaus, [b]*ntaus, [B]*ntaus, [R]*ntaus))
+                K_q = pool.starmap(subsamplek, zip([formula]*ntaus, V_list, taus, coeffs_list, [data_q]*ntaus, [n]*ntaus, [b]*ntaus, [B]*ntaus, [R_q]*ntaus))
+
+            K = np.array(np.matrix(K).T)
+            Kmax = list(map(max,K))
+            Kalpha = np.percentile(Kmax, (1-alpha)*100)
+
+            K_q = np.array(np.matrix(K_q).T)
+            Kmax_q = list(map(max,K_q))
+            Kalpha_q = np.percentile(Kmax_q, (1-alpha)*100)
+            
             ols = smf.ols(formula, data)
             olsfit = ols.fit()
             olscoeffs = np.dot(R.T, olsfit.params)
@@ -81,58 +87,59 @@ def main():
             Kalpha_list_q.append(Kalpha_q)
             olscoeffs_list.append(olscoeffs)
 
-            b80 = 100*np.array(res_to_plot_list[0][0].iloc[:,0])
-            ub80_p = b80 + 100*Kalpha_list[0]*np.array(res_to_plot_list[0][1].iloc[:,0])
-            ub80_m = b80 - 100*Kalpha_list[0]*np.array(res_to_plot_list[0][1].iloc[:,0])
-            
-            b90 = 100*np.array(res_to_plot_list[1][0].iloc[:,0])
-            ub90_p = b90 + 100*Kalpha_list[1]*np.array(res_to_plot_list[1][1].iloc[:,0])
-            ub90_m = b90 - 100*Kalpha_list[1]*np.array(res_to_plot_list[1][1].iloc[:,0])
-            
-            b00 = 100*np.array(res_to_plot_list[2][0].iloc[:,0])
-            ub00_p = b00 + 100*Kalpha_list[2]*np.array(res_to_plot_list[2][1].iloc[:,0])
-            ub00_m = b00 - 100*Kalpha_list[2]*np.array(res_to_plot_list[2][1].iloc[:,0])
 
-            b80_bis = np.array(res_to_plot_q_list[0][0].iloc[:, 0]) - np.float(res_to_plot_q_list[0][0].iloc[9, 0])
-            ub80_p_bis = b80_bis + 100*Kalpha_list_q[0]*np.array(res_to_plot_q_list[0][1].iloc[:,0])
-            ub80_m_bis = b80_bis - 100*Kalpha_list_q[0]*np.array(res_to_plot_q_list[0][1].iloc[:,0])
+        b80 = 100*np.array(res_to_plot_list[0][0].iloc[:,0])
+        ub80_p = b80 + 100*Kalpha_list[0]*np.array(res_to_plot_list[0][1].iloc[:,0])
+        ub80_m = b80 - 100*Kalpha_list[0]*np.array(res_to_plot_list[0][1].iloc[:,0])
+        
+        b90 = 100*np.array(res_to_plot_list[1][0].iloc[:,0])
+        ub90_p = b90 + 100*Kalpha_list[1]*np.array(res_to_plot_list[1][1].iloc[:,0])
+        ub90_m = b90 - 100*Kalpha_list[1]*np.array(res_to_plot_list[1][1].iloc[:,0])
+        
+        b00 = 100*np.array(res_to_plot_list[2][0].iloc[:,0])
+        ub00_p = b00 + 100*Kalpha_list[2]*np.array(res_to_plot_list[2][1].iloc[:,0])
+        ub00_m = b00 - 100*Kalpha_list[2]*np.array(res_to_plot_list[2][1].iloc[:,0])
 
-            b90_bis = np.array(res_to_plot_q_list[1][0].iloc[:,0]) - np.float(res_to_plot_q_list[1][0].iloc[9,0])
-            ub90_p_bis = b90_bis + 100*Kalpha_list_q[1]*np.array(res_to_plot_q_list[1][1].iloc[:,0])
-            ub90_m_bis = b90_bis - 100*Kalpha_list_q[1]*np.array(res_to_plot_q_list[1][1].iloc[:,0])
+        b80_bis = np.array(res_to_plot_q_list[0][0].iloc[:, 0]) - np.float(res_to_plot_q_list[0][0].iloc[9, 0])
+        ub80_p_bis = b80_bis + Kalpha_list_q[0]*np.array(res_to_plot_q_list[0][1].iloc[:,0])
+        ub80_m_bis = b80_bis - Kalpha_list_q[0]*np.array(res_to_plot_q_list[0][1].iloc[:,0])
 
-            b00_bis = np.array(res_to_plot_q_list[2][0].iloc[:,0]) - np.float(res_to_plot_q_list[2][0].iloc[9,0])
-            ub00_p_bis = b00_bis + 100*Kalpha_list_q[2]*np.array(res_to_plot_q_list[2][1].iloc[:,0])
-            ub00_m_bis = b00_bis - 100*Kalpha_list_q[2]*np.array(res_to_plot_q_list[2][1].iloc[:,0])
+        b90_bis = np.array(res_to_plot_q_list[1][0].iloc[:,0]) - np.float(res_to_plot_q_list[1][0].iloc[9,0])
+        ub90_p_bis = b90_bis + Kalpha_list_q[1]*np.array(res_to_plot_q_list[1][1].iloc[:,0])
+        ub90_m_bis = b90_bis - Kalpha_list_q[1]*np.array(res_to_plot_q_list[1][1].iloc[:,0])
 
-            csv_df = pd.DataFrame()
-            csv_df["taus"] = taus
+        b00_bis = np.array(res_to_plot_q_list[2][0].iloc[:,0]) - np.float(res_to_plot_q_list[2][0].iloc[9,0])
+        ub00_p_bis = b00_bis + Kalpha_list_q[2]*np.array(res_to_plot_q_list[2][1].iloc[:,0])
+        ub00_m_bis = b00_bis - Kalpha_list_q[2]*np.array(res_to_plot_q_list[2][1].iloc[:,0])
 
-            csv_df["b80"]= b80
-            csv_df["b90"]= b90
-            csv_df["b00"]= b00
+        csv_df = pd.DataFrame()
+        csv_df["taus"] = taus
 
-            csv_df["b80_bis"]= b80_bis
-            csv_df["b90_bis"]= b90_bis
-            csv_df["b00_bis"]= b00_bis
+        csv_df["b80"]= b80
+        csv_df["b90"]= b90
+        csv_df["b00"]= b00
 
-            csv_df["ub80_p"]= ub80_p
-            csv_df["ub90_p"]= ub90_p
-            csv_df["ub00_p"]= ub00_p
+        csv_df["b80_bis"]= b80_bis
+        csv_df["b90_bis"]= b90_bis
+        csv_df["b00_bis"]= b00_bis
 
-            csv_df["ub80_p_bis"]= ub80_p_bis
-            csv_df["ub90_p_bis"]= ub90_p_bis
-            csv_df["ub00_p_bis"]= ub00_p_bis
+        csv_df["ub80_p"]= ub80_p
+        csv_df["ub90_p"]= ub90_p
+        csv_df["ub00_p"]= ub00_p
 
-            csv_df["ub80_m"]= ub80_m
-            csv_df["ub90_m"]= ub90_m
-            csv_df["ub00_m"]= ub00_m
+        csv_df["ub80_p_bis"]= ub80_p_bis
+        csv_df["ub90_p_bis"]= ub90_p_bis
+        csv_df["ub00_p_bis"]= ub00_p_bis
 
-            csv_df["ub80_m_bis"]= ub80_m_bis
-            csv_df["ub90_m_bis"]= ub90_m_bis
-            csv_df["ub00_m_bis"]= ub00_m_bis
+        csv_df["ub80_m"]= ub80_m
+        csv_df["ub90_m"]= ub90_m
+        csv_df["ub00_m"]= ub00_m
 
-            csv_df.to_csv("Data/figures2.csv")
+        csv_df["ub80_m_bis"]= ub80_m_bis
+        csv_df["ub90_m_bis"]= ub90_m_bis
+        csv_df["ub00_m_bis"]= ub00_m_bis
+
+        csv_df.to_csv("Data/figures2.csv")
     else :
         csv_df = pd.read_csv("Data/figures2.csv")
         taus = csv_df["taus"]
