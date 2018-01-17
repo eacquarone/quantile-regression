@@ -100,15 +100,15 @@ def main():
         ub00_p = b00 + 100*Kalpha_list[2]*np.array(res_to_plot_list[2][1].iloc[:,0])
         ub00_m = b00 - 100*Kalpha_list[2]*np.array(res_to_plot_list[2][1].iloc[:,0])
 
-        b80_bis = np.array(res_to_plot_q_list[0][0].iloc[:, 0]) - np.float(res_to_plot_q_list[0][0].iloc[9, 0])
+        b80_bis = np.array(res_to_plot_q_list[0][0].iloc[:, 0]) - np.float(res_to_plot_q_list[0][0].iloc[8, 0])
         ub80_p_bis = b80_bis + Kalpha_list_q[0]*np.array(res_to_plot_q_list[0][1].iloc[:,0])
         ub80_m_bis = b80_bis - Kalpha_list_q[0]*np.array(res_to_plot_q_list[0][1].iloc[:,0])
 
-        b90_bis = np.array(res_to_plot_q_list[1][0].iloc[:,0]) - np.float(res_to_plot_q_list[1][0].iloc[9,0])
+        b90_bis = np.array(res_to_plot_q_list[1][0].iloc[:,0]) - np.float(res_to_plot_q_list[1][0].iloc[8,0])
         ub90_p_bis = b90_bis + Kalpha_list_q[1]*np.array(res_to_plot_q_list[1][1].iloc[:,0])
         ub90_m_bis = b90_bis - Kalpha_list_q[1]*np.array(res_to_plot_q_list[1][1].iloc[:,0])
 
-        b00_bis = np.array(res_to_plot_q_list[2][0].iloc[:,0]) - np.float(res_to_plot_q_list[2][0].iloc[9,0])
+        b00_bis = np.array(res_to_plot_q_list[2][0].iloc[:,0]) - np.float(res_to_plot_q_list[2][0].iloc[8,0])
         ub00_p_bis = b00_bis + Kalpha_list_q[2]*np.array(res_to_plot_q_list[2][1].iloc[:,0])
         ub00_m_bis = b00_bis - Kalpha_list_q[2]*np.array(res_to_plot_q_list[2][1].iloc[:,0])
 
@@ -167,20 +167,17 @@ def main():
         ub80_m_bis = csv_df["ub80_m_bis"]
         ub90_m_bis = csv_df["ub90_m_bis"]
         ub00_m_bis = csv_df["ub00_m_bis"]
-
-        csv_df.to_csv("Data/figures2.csv")
-
     
     fig, (ax1) = plt.subplots()
     ax1.fill_between(taus, ub80_m, ub80_p, facecolor='silver', interpolate=True, alpha = .5)
     ax1.fill_between(taus, ub90_m, ub90_p, facecolor='black', interpolate=True, alpha = .5)
-    ax1.fill_between(taus, ub00_m, ub00_p, facecolor='dimgrey', interpolate=True, alpha = .5)
+    ax1.fill_between(taus, ub00_m, ub00_p, facecolor='brown', interpolate=True, alpha = .5)
     plot80 = ax1.plot(taus, b80,'--', label = '1980', color='black')
     plot90 = ax1.plot(taus, b90,'--', label = '1990', color='black')
     plot00 = ax1.plot(taus, b00,'--', label = '2000', color='black')
     plot80_bg = ax1.fill(np.NaN, np.NaN, 'silver', alpha=0.5)
     plot90_bg = ax1.fill(np.NaN, np.NaN, 'black', alpha=0.5)
-    plot00_bg = ax1.fill(np.NaN, np.NaN, 'dimgrey', alpha=0.5)
+    plot00_bg = ax1.fill(np.NaN, np.NaN, 'brown', alpha=0.5)
     
     ax1.legend([(plot80_bg[0], plot80[0]), (plot90_bg[0], plot90[0]), (plot00_bg[0], plot00[0])], ['1980','1990','2000'])
     ax1.set_xlabel('Quantile Index')
@@ -194,14 +191,15 @@ def main():
     plot80_bis = ax1.plot(taus, b80_bis,'--', label = '1980', color='black')
     plot90_bis = ax1.plot(taus, b90_bis,'--', label = '1990', color='black')
     plot00_bis = ax1.plot(taus, b00_bis,'--', label = '2000', color='black')
+    ax1.plot(taus, [0]*len(b80_bis), color='black', lw = .5)
 
-    ax1.fill_between(taus, ub80_m_bis, ub80_p_bis, facecolor='silver', interpolate=True, alpha = .5)
-    ax1.fill_between(taus, ub90_m_bis, ub90_p_bis, facecolor='dimgrey', interpolate=True, alpha = .5)
-    ax1.fill_between(taus, ub00_m_bis, ub00_p_bis, facecolor='grey', interpolate=True, alpha = .5)
+    ax1.fill_between(taus, ub80_m_bis, ub80_p_bis, facecolor='silver', interpolate=True, alpha = .8)
+    ax1.fill_between(taus, ub90_m_bis, ub90_p_bis, facecolor='black', interpolate=True, alpha = .8)
+    ax1.fill_between(taus, ub00_m_bis, ub00_p_bis, facecolor='brown', interpolate=True, alpha = .8)
 
-    plot80_bg_bis = ax1.fill(np.NaN, np.NaN, 'silver', alpha=0.5)
-    plot90_bg_bis = ax1.fill(np.NaN, np.NaN, 'black', alpha=0.5)
-    plot00_bg_bis = ax1.fill(np.NaN, np.NaN, 'dimgrey', alpha=0.5)
+    plot80_bg_bis = ax1.fill(np.NaN, np.NaN, 'silver', alpha=0.8)
+    plot90_bg_bis = ax1.fill(np.NaN, np.NaN, 'black', alpha=0.8)
+    plot00_bg_bis = ax1.fill(np.NaN, np.NaN, 'brown', alpha=0.8)
     ax1.legend([(plot80_bg_bis[0], plot80_bis[0]), (plot90_bg_bis[0], plot90_bis[0]), (plot00_bg_bis[0], plot00_bis[0])], ['1980','1990','2000'])
     ax1.set_xlabel('Quantile Index')
     ax1.set_ylabel('Schooling Coefficients (%)')
