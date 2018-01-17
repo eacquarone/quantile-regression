@@ -56,8 +56,8 @@ class TableGenerator(object):
 		collapse_dico["q75"] = lambda x : np.percentile(x, q = 75)
 		collapse_dico["q90"] = lambda x : np.percentile(x, q = 90)
 
-		for col in collapse_dico:
-			census80t2[col] = census80t2[col]*census80t2["perwt"]
+		# for col in collapse_dico:
+		# 	census80t2[col] = census80t2[col]*census80t2["perwt"]
 
 		collapse_dico["perwt"] = "sum"
 
