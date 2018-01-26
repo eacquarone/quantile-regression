@@ -3,9 +3,16 @@ from processing import (
     importance_weights, density_weights, histogram
 )
 
+from figures import table_1, figure_1, figure_2
+
 
 def main():
     year = 80
+
+    if year in [80, 90]:
+        print("Processing data for the 19{} census ...".format(year))
+    elif year == 00:
+        print("Processing data for the 2000 census ...")
 
     # Obtains nonparametric estimates of the conditional quantiles of log
     # earnings given schooling. These estimates are just the sample quantiles
@@ -44,6 +51,22 @@ def main():
     # Saves individual levels of schooling in the csv file census80i.csv to
     # generate the histogram.
     histogram(year)
+    print("Done !")
+
+    # Reproduces Figure N°1 of the paper
+    print("Reproducing Figure N°1 ...")
+    figure_1()
+    print("Done !")
+
+    # Reproduces Table N°1 of the paper
+    print("Reproducing Table N°1 (as csv files)...")
+    table_1()
+    print("Done !")
+
+    # Reproduces Figure N°2 of the paper
+    print("Reproducing Figure N°2 ...")
+    figure_2()
+    print("Done !")
 
 
 if __name__ == '__main__':
