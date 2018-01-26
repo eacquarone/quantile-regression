@@ -1,7 +1,10 @@
+from __future__ import division
+
 import numpy as np
 import pandas as pd
 import statsmodels.formula.api as smf
 from sklearn.neighbors import KernelDensity
+
 
 
 QUANTILES_LIST = [10, 25, 50, 75, 90]
@@ -153,7 +156,7 @@ class DeltaGenerator(object):
 
         dict_values = []
         for tau in QUANTILES_LIST:
-            for index in range(5, 21):
+            for index in df_educ.index:
                 dict_values.append(
                     ("delta%i_q%i" % (index, tau),
                      df_educ.loc[index]["delta_q%i" % tau])
@@ -177,7 +180,8 @@ class IWGenerator(object):
         groups = data_qr.groupby("educ")
 
         for tau in [10, 25, 50, 75, 90]:
-            for educ in range(5, 20 + 1):
+            for educ in groups.groups:
+                educ = int(educ)
                 estimation_points = groups.get_group(educ)
                 estimation_points = estimation_points["epsilon_q{}".format(tau)]
                 kde = KernelDensity(
@@ -199,8 +203,8 @@ class IWGenerator(object):
         for tau in [10, 25, 50, 75, 90]:
             data_qr["wdensity_q{}".format(tau)] = 0
 
-            for educ in range(5, 20 + 1):
-                s = "{}_q{}".format(educ, tau)
+            for educ in groups.groups:
+                s = "{}_q{}".format(int(educ), tau)
                 idx = groups.get_group(educ).index
 
                 data_qr.loc[
@@ -236,15 +240,17 @@ class DWGenerator(object):
             silverman_fact = silverman_factor(self.qr["epsilon_q%i" % tau])
             kde = KernelDensity(bandwidth=silverman_fact)
             values_tau = np.zeros(16)
-            for index in range(16):
-                group_educ = educ_groups.get_group(index + 5)
-                values_tau[index] = self.estimate_density(
+            i = 0
+            for index in educ_groups.groups:
+                group_educ = educ_groups.get_group(index)
+                values_tau[i] = self.estimate_density(
                     group_educ["epsilon_q%i" % tau], kde
                 )
 
             density_estimates["dweight_q%i" % tau] = values_tau
             density_estimates["dwqr2_q%i" % tau] = self.normalize(
                 density_estimates["dweight_q%i" % tau])
+            i += 1
         density_estimates["educ"] = range(5, 21)
         return density_estimates
 

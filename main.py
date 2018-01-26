@@ -1,3 +1,5 @@
+# coding: utf-8
+
 from processing import (
     conditional_quantiles, quantile_regression, delta,
     importance_weights, density_weights, histogram
@@ -7,11 +9,11 @@ from figures import table_1, figure_1, figure_2
 
 
 def main():
-    year = 80
+    year = "00"
 
     if year in [80, 90]:
         print("Processing data for the 19{} census ...".format(year))
-    elif year == 00:
+    elif year == "00":
         print("Processing data for the 2000 census ...")
 
     # Obtains nonparametric estimates of the conditional quantiles of log
